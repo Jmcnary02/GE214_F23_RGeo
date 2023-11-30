@@ -1,0 +1,109 @@
+---
+title: "Exploring Worcester Election Data for 2023"
+output: html_notebook
+---
+
+# Exploring Worcester Election Data for 2023
+
+## Worcester Election Data
+
+-   use rmarkdown to create the section header
+-   use rmarkdown to make a link that indicates where we got the data: <https://gisdata.worcesterma.gov/>
+-   use plain text to write that this section will show us where Worcester precincts and voting locations are.
+
+```{r}
+library(sf) #here we tell R that we need the Simple Features library (sf)
+library(tmap)    # for static and interactive maps
+library(leaflet) # for interactive maps
+library(ggplot2) # tidyverse data visualization package
+
+#then we create an object called "precs," which is short for precincts and fill it with the data from our geojson file
+precs = read_sf("data/Voting_Precincts_Based_on_2020_Census_Data.geojson")
+
+#the "head" function tells us what is in the object and what kind of object it is
+head(precs)
+
+#let's plot our object
+tm_shape(precs) + 
+  tm_fill()
+
+#now let's try it with some borders
+tm_shape(precs) + 
+  tm_fill() +
+  tm_borders()
+
+#what about some labels?
+tm_shape(precs) + 
+  tm_fill() +
+  tm_borders() +  
+  tm_text("Ward_Precinct","AREA")
+
+#that didn't work? how do we learn more about our tm_* (tmap) functions?
+?tmap
+
+#R will let you make a map object and reuse it
+woo_map1 = tm_shape(precs)+
+  tm_fill()+
+  tm_borders()
+
+woo_map1
+```
+
+# Polling Stations
+
+```{r}
+library(sf) #here we tell R that we need the Simple Features library (sf)
+library(tmap)    # for static and interactive maps
+library(leaflet) # for interactive maps
+library(ggplot2) # tidyverse data visualization package
+
+polls = read_sf("data/Polling_Locations.geojson")
+woo_map2 = tm_shape(polls) +
+  tm_dots(col = "blue")
+
+woo_map1 + woo_map2
+```
+
+# Voter Data
+
+```{r}
+library(dplyr)
+
+results = read.csv("data/worc_23_election_atlarge.csv")
+head(results)
+```
+
+```{r}
+prec_results = left_join(precs, results, by=c("Ward_Precinct" = "ward"))
+
+head(prec_results)
+```
+
+```{r}
+tm_shape(prec_results) + tm_polygons("creamer")
+
+
+
+```
+
+```{r}
+creamer_map = tm_shape(prec_results) + tm_polygons("creamer")
+morales_map = tm_shape(prec_results) + tm_polygons("morales")
+
+tmap_arrange(creamer_map,morales_map)
+
+```
+
+```{r}
+candidates = colnames(prec_results[8:19])
+
+mapz = list()
+
+for (i in candidates[1:12]){
+breakz = c(0,400,600)
+  themap = tm_shape(prec_results) + tm_polygons(i, breaks = breakz) + tm_layout(legend.outside = TRUE)
+  mapz<-append(mapz,list(themap))
+}
+tmap_arrange(mapz,ncol = 4)
+
+```
